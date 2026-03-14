@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nadiya Electric</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <!-- Firebase Storage SDK Added -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+
+    <style>
+        :root {
+            --bg: #0b100e;
+            --bg-alt: #111916;
+            --fg: #e8f5e9;
+            --muted: #6b8f71;
+            --accent: #00e676;
+            --card: #151d19;
+            --border: #1e2d26;
+            --wp: #25D366;
+        }
+        .light-mode {
+            --bg: #f0f4f1;
+            --bg-alt: #ffffff;
+            --fg: #0b100e;
+            --muted: #555;
+            --accent: #008e3c;
+            --card: #ffffff;
+            --border: #d1d5db;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; transition: background 0.3s, color 0.3s, border 0.3s; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; }
+        h1, h2, h3, h4 { font-family: 'Rajdhani', sans-serif; font-weight: 700; }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-alt); }
+        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
+
+        .nav-blur { background: var(--bg-alt); border-bottom: 1px solid var(--border); }
+        
+        .btn-wp {
+            background: var(--wp);
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .btn-wp:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4); }
+        .btn-wp:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+        
+        .btn-cart {
+            background: transparent;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.2s;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .btn-cart:hover { background: rgba(0, 230, 118, 0.1); }
+
+        .products-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        @media (min-width: 640px) { .products-container { grid-template-columns: repeat(3, 1fr); gap: 16px; } }
+        @media (min-width: 1024px) { .products-container { grid-template-columns: repeat(4, 1fr); gap: 20px; } }
+
+        .product-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .product-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .product-card img { width: 100%; height: 120px; object-fit: cover; cursor: pointer; }
+        @media (min-width: 640px) { .product-card img { height: 150px; } }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .modal-box {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            color: var(--fg);
+            position: relative;
+        }
+        .modal-wide { max-width: 800px; }
+        
+        .detail-img { width: 100%; height: 200px; object-fit: cover; }
+        @media (min-width: 640px) { .detail-img { height: 300px; } }
+
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        .upload-box {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            background: var(--bg);
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .upload-box:hover { border-color: var(--accent); }
+        .upload-box input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        .upload-preview { max-width: 100%; max-height: 120px; margin-top: 8px; border-radius: 8px; display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="nav-blur fixed top-0 left-0 right-0 z-50 h-14 flex items-center px-3 md:px-6">
+        <div class="max-w-7xl mx-auto w-full flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, var(--accent), #00c853);">
+                    <svg width="16" height="16" fill="#0b100e" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                </div>
+                <h1 class="text-base md:text-lg font-bold tracking-tight">NADIYA ELECTRIC</h1>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <label class="switch">
+                    <input type="checkbox" id="theme-toggle" onchange="toggleTheme()">
+                    <span class="slider"></span>
+                </label>
+                <button onclick="openCart()" class="relative p-2 rounded-lg" style="background: var(--bg-alt);">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                    <span id="cart-count" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center hidden">0</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <section class="pt-20 pb-24 px-3 md:px-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="mb-6 text-center">
+                <h1 class="text-2xl md:text-4xl font-bold mb-2">Best Quality <span style="color: var(--accent)">Electronics</span></h1>
+                <p style="color: var(--muted);" class="text-sm mb-4">অর্ডার করুন WhatsApp-এ</p>
+                <div class="flex justify-center gap-2 flex-wrap mb-6">
+                    <button onclick="filterProducts('all')" class="filter-btn active px-3 py-1 rounded-full text-xs font-medium" style="background: var(--accent); color: #000;">All</button>
+                    <button onclick="filterProducts('fan')" class="filter-btn px-3 py-1 rounded-full text-xs font-medium" style="background: var(--bg-alt); border: 1px solid var(--border);">Fans</button>
+                    <button onclick="filterProducts('light')" class="filter-btn px-3 py-1 rounded-full text-xs font-medium" style="background: var(--bg-alt); border: 1px solid var(--border);">Lights</button>
+                    <button onclick="filterProducts('switch')" class="filter-btn px-3 py-1 rounded-full text-xs font-medium" style="background: var(--bg-alt); border: 1px solid var(--border);">Switches</button>
+                    <button onclick="filterProducts('other')" class="filter-btn px-3 py-1 rounded-full text-xs font-medium" style="background: var(--bg-alt); border: 1px solid var(--border);">Others</button>
+                </div>
+            </div>
+            <div id="products-container" class="products-container">Loading...</div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="py-6 px-4 border-t fixed bottom-0 left-0 right-0 z-40" style="background: var(--bg-alt); border-color: var(--border);">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div onclick="handleLogoClick()" class="flex items-center gap-2 cursor-pointer select-none" title="Nadiya Electric">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: var(--accent);">
+                    <svg width="14" height="14" fill="#000" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                </div>
+                <span class="text-xs font-bold hidden md:block">NADIYA ELECTRIC</span>
+            </div>
+            <a href="https://wa.me/8801642485254" target="_blank" class="btn-wp text-xs py-2 px-3">
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                Contact
+            </a>
+        </div>
+    </footer>
+
+    <!-- PRODUCT DETAIL MODAL -->
+    <div id="detail-modal" class="modal-overlay">
+        <div class="modal-box">
+            <button onclick="closeDetailModal()" class="absolute top-3 right-3 text-2xl opacity-70 z-10">&times;</button>
+            <img id="detail-img" src="" class="detail-img">
+            <div class="p-5">
+                <span id="detail-cat" class="text-xs font-medium px-2 py-1 rounded" style="background: rgba(0,230,118,0.15); color: var(--accent);"></span>
+                <h2 id="detail-name" class="text-xl font-bold mt-2 mb-1"></h2>
+                <p id="detail-price" class="text-lg font-bold mb-3" style="color: var(--accent);"></p>
+                <div class="text-sm mb-5 whitespace-pre-line" style="color: var(--muted);" id="detail-desc"></div>
+                
+                <div class="flex gap-2">
+                    <button onclick="closeDetailModal()" class="btn-cart flex-1 py-2">Back</button>
+                    <button id="detail-buy-btn" class="btn-wp flex-1 py-2 justify-center">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                        Buy Now
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CUSTOMER INFO MODAL -->
+    <div id="customer-modal" class="modal-overlay">
+        <div class="modal-box p-5">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">Delivery Information</h3>
+                <button onclick="closeCustomerModal()" class="text-2xl opacity-70">&times;</button>
+            </div>
+            <div class="space-y-3">
+                <input type="text" id="cust-name" placeholder="আপনার নাম *" class="w-full p-2 rounded border text-sm outline-none focus:border-green-500" style="background: var(--bg); border-color: var(--border);">
+                <input type="tel" id="cust-phone" placeholder="মোবাইল নম্বর *" class="w-full p-2 rounded border text-sm outline-none focus:border-green-500" style="background: var(--bg); border-color: var(--border);">
+                <textarea id="cust-address" placeholder="সম্পূর্ণ ঠিকানা *" class="w-full p-2 rounded border text-sm outline-none focus:border-green-500" style="background: var(--bg); border-color: var(--border); min-height: 80px;"></textarea>
+            </div>
+            <div class="mt-4 p-3 rounded text-xs" style="background: var(--bg);" id="order-summary-preview"></div>
+            <button onclick="submitFinalOrder()" class="btn-wp w-full py-2 mt-4 justify-center">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                Confirm & Send Order
+            </button>
+        </div>
+    </div>
+
+    <!-- CART MODAL -->
+    <div id="cart-modal" class="modal-overlay">
+        <div class="modal-box p-5">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">Your Cart</h3>
+                <button onclick="closeCart()" class="text-2xl opacity-70 hover:opacity-100">&times;</button>
+            </div>
+            <div id="cart-items" class="space-y-3 mb-4 max-h-60 overflow-y-auto"></div>
+            <div class="border-t pt-4" style="border-color: var(--border);">
+                <div class="flex justify-between text-base font-bold mb-3">
+                    <span>Total:</span>
+                    <span id="cart-total" style="color: var(--accent);">0 BDT</span>
+                </div>
+                <button onclick="processCartOrder()" class="btn-wp w-full py-2 justify-center">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    Order All via WhatsApp
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN LOGIN MODAL -->
+    <div id="admin-login-modal" class="modal-overlay">
+        <div class="modal-box p-6 text-center">
+            <h3 class="text-xl font-bold mb-4">Admin Login</h3>
+            <input type="email" id="admin-email" placeholder="Admin Email" class="w-full p-2 rounded-lg border outline-none focus:border-green-500 mb-3" style="background: var(--bg); border-color: var(--border);">
+            <input type="password" id="admin-pass" placeholder="Password" class="w-full p-2 rounded-lg border outline-none focus:border-green-500 mb-3" style="background: var(--bg); border-color: var(--border);" onkeydown="if(event.key==='Enter') loginAdmin()">
+            <p id="login-error" class="text-red-500 text-sm mb-3 hidden">Incorrect Email or Password</p>
+            <div class="flex gap-2 justify-center">
+                <button onclick="closeAdminLogin()" class="btn-cart py-2 px-4">Cancel</button>
+                <button onclick="loginAdmin()" class="btn-wp py-2 px-4">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN PANEL MODAL -->
+    <div id="admin-panel" class="modal-overlay overflow-y-auto">
+        <div class="modal-box modal-wide p-5">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Admin Panel</h3>
+                <div class="flex items-center gap-2">
+                    <button onclick="logoutAdmin()" class="btn-cart text-xs py-1 px-2">Logout</button>
+                    <button onclick="closeAdminPanel()" class="text-2xl opacity-70">&times;</button>
+                </div>
+            </div>
+            
+            <div class="mb-6 p-4 rounded-lg" style="background: var(--bg); border: 1px solid var(--border);">
+                <h4 class="font-bold mb-3" id="form-title">Add New Product</h4>
+                <input type="hidden" id="edit-id">
+                
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <input type="text" id="np-name" placeholder="Name" class="p-2 rounded border text-sm outline-none" style="background: var(--bg-alt); border-color: var(--border);">
+                    <select id="np-cat" class="p-2 rounded border text-sm outline-none" style="background: var(--bg-alt); border-color: var(--border);">
+                        <option value="fan">Fan</option>
+                        <option value="light">Light</option>
+                        <option value="switch">Switch</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <input type="number" id="np-price" placeholder="Price (BDT)" class="p-2 rounded border text-sm outline-none" style="background: var(--bg-alt); border-color: var(--border);">
+                    
+                    <!-- Upload Box UI Updated -->
+                    <div class="upload-box relative h-10" onclick="document.getElementById('np-file').click()">
+                        <input type="file" id="np-file" accept="image/*" onchange="previewImage(this)">
+                        <p class="text-xs pointer-events-none" style="color:var(--muted);" id="upload-text">Upload Image</p>
+                        <img id="upload-preview" class="upload-preview hidden absolute inset-0 w-full h-full object-cover rounded-lg pointer-events-none">
+                    </div>
+                </div>
+                
+                <textarea id="np-details" placeholder="Product Details" class="w-full p-2 rounded border text-sm outline-none mb-3" style="background: var(--bg-alt); border-color: var(--border); min-height: 60px;"></textarea>
+                
+                <div class="flex gap-2">
+                    <button onclick="saveProduct()" class="btn-wp flex-1 py-2 justify-center text-sm" id="save-btn">Add Product</button>
+                    <button onclick="resetForm()" class="btn-cart py-2 px-4 text-sm">Reset</button>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="font-bold mb-3">Manage Products</h4>
+                <div id="admin-product-list" class="space-y-2 max-h-60 overflow-y-auto"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN SCRIPT -->
+    <script>
+        // ===== 1. FIREBASE CONFIGURATION =====
+        const firebaseConfig = {
+            apiKey: "AIzaSyDD18b_xYq6pWE5QHHUcdVjNHIpus3ub0o",
+            authDomain: "nadia-electronics.firebaseapp.com",
+            databaseURL: "https://nadia-electronics-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "nadia-electronics",
+            storageBucket: "nadia-electronics.firebasestorage.app", // Ensure this is correct in your console
+            messagingSenderId: "336195182365",
+            appId: "1:336195182365:web:d1c9d3688969e9bc0e4bf4",
+            measurementId: "G-0CE5ZM0HJL"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const storage = firebase.storage(); // Initialize Storage
+
+        // ===== 2. DATA & STATE =====
+        let products = [];
+        let cart = [];
+        let logoClickCount = 0;
+        const PHONE = "8801642485254";
+        let orderContext = { type: 'single', id: null };
+
+        // ===== 3. INIT =====
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTheme();
+            loadProductsFromFirestore();
+        });
+
+        // ===== 4. FIRESTORE FUNCTIONS =====
+        function loadProductsFromFirestore() {
+            db.collection('products').onSnapshot(snapshot => {
+                products = [];
+                snapshot.forEach(doc => {
+                    products.push({ id: doc.id, ...doc.data() });
+                });
+                renderProducts();
+                renderAdminList();
+            }, error => {
+                console.error("Error loading products: ", error);
+                document.getElementById('products-container').innerHTML = "<p class='text-red-500 text-center col-span-2'>Error loading products.</p>";
+            });
+        }
+
+        // ===== 5. THEME & RENDER =====
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+            localStorage.setItem('theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
+        }
+        function loadTheme() {
+            if (localStorage.getItem('theme') === 'light') {
+                document.body.classList.add('light-mode');
+                document.getElementById('theme-toggle').checked = true;
+            }
+        }
+
+        function renderProducts(filter = 'all') {
+            const container = document.getElementById('products-container');
+            const filtered = filter === 'all' ? products : products.filter(p => p.category === filter);
+            
+            if(filtered.length === 0) {
+                container.innerHTML = '<div class="col-span-2 text-center py-8" style="color:var(--muted);">No products found.</div>';
+                return;
+            }
+
+            container.innerHTML = filtered.map(p => `
+                <div class="product-card">
+                    <img src="${p.img}" onclick="openDetailModal('${p.id}')" onerror="this.src='https://via.placeholder.com/300x200/1a1a1a/00e676?text=No+Image'" alt="${p.name}">
+                    <div class="p-2 flex flex-col flex-1">
+                        <span class="text-[10px] font-medium px-1.5 py-0.5 rounded self-start mb-1" style="background: rgba(0,230,118,0.15); color: var(--accent);">${p.category.toUpperCase()}</span>
+                        <h3 onclick="openDetailModal('${p.id}')" class="font-semibold text-sm leading-tight mb-1 line-clamp-2 cursor-pointer hover:underline" style="min-height:32px;">${p.name}</h3>
+                        <p class="text-base font-bold mt-auto mb-2" style="color: var(--accent);">${p.price ? p.price.toLocaleString() : 0} BDT</p>
+                        <div class="flex gap-1.5 mt-auto">
+                            <button onclick="addToCart('${p.id}')" class="btn-cart flex-1 py-1.5 text-xs">Cart</button>
+                            <button onclick="openCustomerModal('single', '${p.id}')" class="btn-wp flex-1 py-1.5 text-xs">
+                                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                                Buy Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterProducts(cat) {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.style.background = 'var(--bg-alt)';
+                btn.style.color = 'var(--fg)';
+                btn.style.border = '1px solid var(--border)';
+            });
+            if(event && event.target) {
+                event.target.style.background = 'var(--accent)';
+                event.target.style.color = '#000';
+                event.target.style.border = 'none';
+            }
+            renderProducts(cat);
+        }
+
+        // ===== 6. MODALS & ORDER LOGIC =====
+        function openDetailModal(id) {
+            const p = products.find(item => item.id === id);
+            if(!p) return;
+            document.getElementById('detail-img').src = p.img;
+            document.getElementById('detail-name').textContent = p.name;
+            document.getElementById('detail-price').textContent = p.price.toLocaleString() + ' BDT';
+            document.getElementById('detail-cat').textContent = p.category.toUpperCase();
+            document.getElementById('detail-desc').textContent = p.details || 'No details available.';
+            document.getElementById('detail-buy-btn').onclick = () => openCustomerModal('single', id);
+            document.getElementById('detail-modal').style.display = 'flex';
+        }
+        function closeDetailModal() { document.getElementById('detail-modal').style.display = 'none'; }
+
+        function openCustomerModal(type, id = null) {
+            closeDetailModal(); closeCart();
+            orderContext = { type, id };
+            let summary = "";
+            if(type === 'single' && id) {
+                const p = products.find(item => item.id === id);
+                summary = `<p class="font-semibold">${p.name}</p><p class="font-bold" style="color:var(--accent)">${p.price} BDT</p>`;
+            } else if(type === 'cart') {
+                let total = 0;
+                cart.forEach(item => { total += item.price * item.qty; });
+                summary = `<p class="font-semibold">${cart.length} Item(s) in Cart</p><p class="font-bold" style="color:var(--accent)">${total.toLocaleString()} BDT</p>`;
+            }
+            document.getElementById('order-summary-preview').innerHTML = summary;
+            document.getElementById('customer-modal').style.display = 'flex';
+        }
+        function closeCustomerModal() { document.getElementById('customer-modal').style.display = 'none'; }
+
+        function submitFinalOrder() {
+            const name = document.getElementById('cust-name').value.trim();
+            const phone = document.getElementById('cust-phone').value.trim();
+            const address = document.getElementById('cust-address').value.trim();
+            if(!name || !phone || !address) { alert("Please fill all fields"); return; }
+
+            let text = `*New Order from Nadiya Electric*\n\nName: ${name}\nPhone: ${phone}\nAddress: ${address}\n\n`;
+            let total = 0;
+            if(orderContext.type === 'single') {
+                const p = products.find(item => item.id === orderContext.id);
+                text += `Item: ${p.name}\nPrice: ${p.price} BDT\n`;
+                total = p.price;
+            } else {
+                text += `Items:\n`;
+                cart.forEach((item) => {
+                    text += `- ${item.name} x ${item.qty} = ${item.price * item.qty} BDT\n`;
+                    total += item.price * item.qty;
+                });
+            }
+            text += `\nTotal: ${total} BDT`;
+
+            window.open(`https://wa.me/${PHONE}?text=${encodeURIComponent(text)}`, '_blank');
+            closeCustomerModal();
+            document.getElementById('cust-name').value = '';
+            document.getElementById('cust-phone').value = '';
+            document.getElementById('cust-address').value = '';
+            if(orderContext.type === 'cart') { cart = []; updateCartUI(); }
+        }
+
+        // ===== 7. CART LOGIC =====
+        function addToCart(id) {
+            const item = products.find(p => p.id === id);
+            const existing = cart.find(c => c.id === id);
+            if (existing) existing.qty++;
+            else cart.push({...item, qty: 1});
+            updateCartUI();
+        }
+        function updateCartUI() {
+            const count = cart.reduce((a, b) => a + b.qty, 0);
+            const countEl = document.getElementById('cart-count');
+            countEl.textContent = count;
+            countEl.classList.toggle('hidden', count === 0);
+        }
+        function openCart() { document.getElementById('cart-modal').style.display = 'flex'; renderCartItems(); }
+        function closeCart() { document.getElementById('cart-modal').style.display = 'none'; }
+        function processCartOrder() { if(cart.length === 0) return; openCustomerModal('cart'); }
+        function renderCartItems() {
+            const container = document.getElementById('cart-items');
+            let total = 0;
+            if (cart.length === 0) {
+                container.innerHTML = '<p class="text-center py-8 text-sm" style="color:var(--muted);">Cart is empty</p>';
+                document.getElementById('cart-total').textContent = '0 BDT';
+                return;
+            }
+            container.innerHTML = cart.map(item => {
+                total += item.price * item.qty;
+                return `
+                    <div class="flex justify-between items-center p-2 rounded" style="background: var(--bg);">
+                        <div><p class="font-medium text-sm">${item.name}</p><p class="text-xs" style="color:var(--muted);">${item.qty} x ${item.price}</p></div>
+                        <button onclick="removeFromCart('${item.id}')" class="text-red-400 text-xs px-2">X</button>
+                    </div>`;
+            }).join('');
+            document.getElementById('cart-total').textContent = total.toLocaleString() + ' BDT';
+        }
+        function removeFromCart(id) { cart = cart.filter(c => c.id !== id); updateCartUI(); renderCartItems(); }
+
+        // ===== 8. ADMIN LOGIC =====
+        function handleLogoClick() {
+            logoClickCount++;
+            if (logoClickCount >= 5) {
+                openAdminLogin(); 
+                logoClickCount = 0;
+            }
+        }
+
+        function openAdminLogin() { 
+            document.getElementById('admin-login-modal').style.display = 'flex'; 
+            document.getElementById('admin-email').value = ''; 
+            document.getElementById('admin-pass').value = ''; 
+            document.getElementById('login-error').classList.add('hidden'); 
+        }
+        function closeAdminLogin() { document.getElementById('admin-login-modal').style.display = 'none'; }
+
+        function loginAdmin() {
+            const email = document.getElementById('admin-email').value;
+            const password = document.getElementById('admin-pass').value;
+            if(!email || !password) { alert("Enter email and password"); return; }
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then(() => { closeAdminLogin(); openAdminPanel(); })
+                .catch(() => { document.getElementById('login-error').classList.remove('hidden'); });
+        }
+
+        function logoutAdmin() {
+            auth.signOut().then(() => { closeAdminPanel(); });
+        }
+
+        function openAdminPanel() { document.getElementById('admin-panel').style.display = 'flex'; renderAdminList(); }
+        function closeAdminPanel() { document.getElementById('admin-panel').style.display = 'none'; }
+
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('upload-preview');
+                    preview.src = e.target.result;
+                    preview.classList.remove('hidden');
+                    document.getElementById('upload-text').style.display = 'none';
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // ===== 9. FIRESTORE CRUD WITH STORAGE =====
+        
+        // Main Save Function: Handles Upload -> Get URL -> Save to Firestore
+        async function saveProduct() {
+            const id = document.getElementById('edit-id').value;
+            const name = document.getElementById('np-name').value;
+            const cat = document.getElementById('np-cat').value;
+            const price = parseInt(document.getElementById('np-price').value);
+            const details = document.getElementById('np-details').value;
+            const fileInput = document.getElementById('np-file');
+            const file = fileInput.files[0];
+            
+            // Validation
+            if (!name || !price) { alert("Please fill name and price"); return; }
+            if (!id && !file) { alert("Please select an image for new product"); return; }
+
+            const btn = document.getElementById('save-btn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = "Uploading...";
+
+            try {
+                let imgUrl = "";
+
+                // Step 1: If new file selected, upload to Storage
+                if (file) {
+                    const storageRef = storage.ref();
+                    // Create unique filename
+                    const fileName = 'products/' + Date.now() + '_' + file.name;
+                    const fileRef = storageRef.child(fileName);
+                    
+                    // Upload
+                    const snapshot = await fileRef.put(file);
+                    
+                    // Get Download URL
+                    imgUrl = await snapshot.ref.getDownloadURL();
+                } else {
+                    // If editing and no new file, keep old image
+                    const existing = products.find(p => p.id === id);
+                    if (existing) imgUrl = existing.img;
+                }
+
+                // Step 2: Save Data to Firestore
+                const productData = { 
+                    name, 
+                    category: cat, 
+                    price, 
+                    details, 
+                    img: imgUrl 
+                };
+
+                if (id) {
+                    // Update existing
+                    await db.collection('products').doc(id).update(productData);
+                } else {
+                    // Add new
+                    await db.collection('products').add(productData);
+                }
+                
+                resetForm();
+
+            } catch (error) {
+                console.error("Error saving product: ", error);
+                alert("Error uploading image or saving data. Check console.");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+                // Ensure button text is correct after reset
+                if(!id) btn.textContent = "Add Product";
+            }
+        }
+
+        function editProduct(id) {
+            const p = products.find(item => item.id === id);
+            if (!p) return;
+
+            document.getElementById('edit-id').value = p.id;
+            document.getElementById('np-name').value = p.name;
+            document.getElementById('np-cat').value = p.category;
+            document.getElementById('np-price').value = p.price;
+            document.getElementById('np-details').value = p.details || '';
+            
+            const preview = document.getElementById('upload-preview');
+            if(p.img) {
+                preview.src = p.img;
+                preview.classList.remove('hidden');
+                document.getElementById('upload-text').style.display = 'none';
+            }
+            
+            // Important: Clear file input so we don't accidentally overwrite image unless new file chosen
+            document.getElementById('np-file').value = '';
+
+            document.getElementById('form-title').textContent = "Edit Product";
+            document.getElementById('save-btn').textContent = "Update Product";
+        }
+
+        function resetForm() {
+            document.getElementById('edit-id').value = '';
+            document.getElementById('np-name').value = '';
+            document.getElementById('np-price').value = '';
+            document.getElementById('np-details').value = '';
+            document.getElementById('upload-preview').classList.add('hidden');
+            document.getElementById('upload-text').style.display = 'block';
+            document.getElementById('np-file').value = '';
+            document.getElementById('form-title').textContent = "Add New Product";
+            document.getElementById('save-btn').textContent = "Add Product";
+        }
+
+        function deleteProduct(id) {
+            if (confirm("Delete this product?")) {
+                db.collection('products').doc(id).delete()
+                    .then(() => { resetForm(); })
+                    .catch(e => alert("Error deleting: " + e.message));
+            }
+        }
+
+        function renderAdminList() {
+            const list = document.getElementById('admin-product-list');
+            list.innerHTML = products.map(p => `
+                <div class="flex justify-between items-center p-2 rounded" style="background: var(--bg);">
+                    <div class="flex items-center gap-2 overflow-hidden">
+                        <img src="${p.img}" class="w-10 h-10 object-cover rounded flex-shrink-0" onerror="this.src='https://via.placeholder.com/100'">
+                        <div class="truncate">
+                            <p class="text-sm font-medium truncate">${p.name}</p>
+                            <p class="text-xs" style="color:var(--accent);">${p.price} BDT</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-1 flex-shrink-0">
+                        <button onclick="editProduct('${p.id}')" class="text-blue-400 text-xs px-2 py-1 border border-blue-400 rounded hover:bg-blue-400 hover:text-white">Edit</button>
+                        <button onclick="deleteProduct('${p.id}')" class="text-red-400 text-xs px-2 py-1 border border-red-400 rounded hover:bg-red-400 hover:text-white">Del</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
