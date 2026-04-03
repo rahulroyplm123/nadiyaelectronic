@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: products
+    // Document ID: productId
+    // Fields:
+    //   - name: string (required) - The name of the product.
+    //   - price: number (required) - The regular price.
+    //   - discount: number (optional) - The discount price.
+    //   - delivery: number (optional) - The delivery charge.
+    //   - image: string (required) - The image URL.
+    //   - category: string (required) - The category.
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.uid == "aD6kRrKo3rEZ9z3R4HSSFGSauTH12"
+      );
+    }
+
+    function isValidProduct(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.price is number && data.price >= 0 &&
+             (!('discount' in data) || (data.discount is number && data.discount >= 0)) &&
+             (!('delivery' in data) || (data.delivery is number && data.delivery >= 0)) &&
+             data.image is string && data.image.size() > 0 && data.image.size() < 1000000 &&
+             data.category is string && data.category.size() > 0 && data.category.size() < 100 &&
+             (!('description' in data) || (data.description is string && data.description.size() < 5000));
+    }
+
+    match /products/{productId} {
+      allow read: if true; // Publicly readable for e-commerce
+      allow create, update, delete: if isAdmin() && isValidProduct(request.resource.data);
+    }
+  }
+}

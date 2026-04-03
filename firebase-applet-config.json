@@ -1,0 +1,10 @@
+{
+  "projectId": "nadia-electronics",
+  "appId": "1:336195182365:web:d1c9d3688969e9bc0e4bf4",
+  "apiKey": "AIzaSyDD18b_xYq6pWE5QHHUcdVjNHIpus3ub0o",
+  "authDomain": "nadia-electronics.firebaseapp.com",
+  "databaseURL": "https://nadia-electronics-default-rtdb.asia-southeast1.firebasedatabase.app",
+  "storageBucket": "nadia-electronics.firebasestorage.app",
+  "messagingSenderId": "336195182365",
+  "measurementId": "G-0CE5ZM0HJL"
+}
